@@ -1,6 +1,5 @@
 package com.example.photoswitcher.ui.view
 
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -11,13 +10,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.example.photoswitcher.R
-import com.example.photoswitcher.utils.Status
 import com.example.photoswitcher.ui.base.ViewModelFactory
 import com.example.photoswitcher.ui.viewmodel.MainViewModel
+import com.example.photoswitcher.ui.viewmodel.MainViewModel.Companion.PROGRESS_MAX
 import com.example.photoswitcher.utils.FileHelper
-import com.example.photoswitcher.utils.PhotoStorages
-import kotlinx.android.synthetic.main.activity_main.*
-import java.io.File
+import com.example.photoswitcher.utils.PrefHelper
+import com.example.photoswitcher.utils.Status
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
@@ -32,38 +30,17 @@ class MainActivity : AppCompatActivity() {
         setupUI()
         setupViewModel()
         setupObserver()
+
+        mainViewModel.fetchPhotos(this)
     }
 
     private fun setupObserver() {
         mainViewModel.getPhotos().observe(this, Observer {
-            val nextImage = PhotoStorages.getInstance(this).getNextImage()
-            if (nextImage.isBlank()) {
-                tvNoData.visibility = View.VISIBLE
-            }
-            progressBar.max = PhotoStorages.PROGRESS_MAX
-            PhotoStorages.getInstance(this).downloadImage(nextImage, { progress ->
-                if (progress < PhotoStorages.PROGRESS_MAX) {
-                    progressBar.progress = progress
-                } else {
-                    progressBar.visibility = View.GONE
-                    val unzipped =
-                        FileHelper.unzip(File(baseContext.filesDir.absolutePath + "/" + nextImage))
-                    val firstFile = unzipped.firstOrNull()
-                    firstFile?.let {
-                        val bmp = BitmapFactory.decodeByteArray(it.content, 0, it.content.size)
-                        imageView.setImageBitmap(bmp)
-                    } ?: run {
-                        tvNoData.visibility = View.VISIBLE
-                    }
-                }
-            }, {
-                Toast.makeText(this, it, Toast.LENGTH_SHORT)
-                    .show()
-            })
-
+            progressBar.max = PROGRESS_MAX
             when (it.status) {
                 Status.SUCCESS -> {
                     progressBar.visibility = View.GONE
+                    imageView.setImageBitmap(it.data)
                 }
                 Status.LOADING -> {
                     progressBar.visibility = View.VISIBLE
@@ -71,6 +48,7 @@ class MainActivity : AppCompatActivity() {
                 Status.ERROR -> {
                     //Handle Error
                     progressBar.visibility = View.GONE
+                    tvNoData.visibility = View.VISIBLE
                     Toast.makeText(this, it.message, Toast.LENGTH_LONG).show()
                 }
             }
@@ -80,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupViewModel() {
         mainViewModel = ViewModelProviders.of(
             this,
-            ViewModelFactory()
+            ViewModelFactory(PrefHelper.getInstance(this), FileHelper.getInstance(this))
         ).get(MainViewModel::class.java)
     }
 
