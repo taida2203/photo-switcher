@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import com.bumptech.glide.Glide
 import com.example.photoswitcher.R
 import com.example.photoswitcher.ui.base.ViewModelFactory
 import com.example.photoswitcher.ui.viewmodel.MainViewModel
@@ -40,7 +41,7 @@ class MainActivity : AppCompatActivity() {
             when (it.status) {
                 Status.SUCCESS -> {
                     progressBar.visibility = View.GONE
-                    imageView.setImageBitmap(it.data)
+                    Glide.with(this).load(it.data).into(imageView)
                 }
                 Status.LOADING -> {
                     progressBar.visibility = View.VISIBLE
